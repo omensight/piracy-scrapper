@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:scrapper/downloader/episode_downloader.dart';
-import 'package:scrapper/downloader/show_downloader.dart';
+import 'package:scrapper/downloader/show_downloader_manager.dart';
 import 'package:scrapper/scrapper/episode_scrapper.dart';
 import 'package:scrapper/scrapper/show_scrapper.dart';
 
@@ -18,8 +18,7 @@ class ScrapperApp extends StatefulWidget {
 
 class _ScrapperAppState extends State<ScrapperApp> {
   void download() async {
-    final showDOwnlaoder = ShowDownloader(
-      showUrl: 'https://www.ennovelas.com/category/En+los+tacones+de+Eva',
+    final showDOwnlaoder = ShowDownloaderManager(
       dio: Dio(),
       showScrapper: ShowScrapper(),
       episodeDownloader: EpisodeDownloader(

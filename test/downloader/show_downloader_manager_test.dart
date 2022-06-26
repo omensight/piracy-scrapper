@@ -1,12 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:scrapper/downloader/episode_downloader.dart';
-import 'package:scrapper/downloader/show_downloader.dart';
+import 'package:scrapper/downloader/show_downloader_manager.dart';
 import 'package:scrapper/scrapper/show_scrapper.dart';
-import 'package:test/scaffolding.dart';
+import 'package:test/test.dart';
 
 void main() {
-  test('Show downloader have download the show page', () async {
+  test('Show downloader have download the show page on init', () async {
     const showUrl = 'showUrl';
     final mockDio = _getValidDioForShowDownload(showUrl);
     var mockShowScrapper = MockShowScrapper();
@@ -14,36 +14,18 @@ void main() {
     when(() => mockShowScrapper.getEpisodeLinks(any()))
         .thenReturn(['first', 'second']);
     var mockEpisodeDownloader = MockEpisodeDownloader();
-    final ShowDownloader showDownloader = ShowDownloader(
-      showUrl: showUrl,
+    final ShowDownloaderManager showDownloader = ShowDownloaderManager(
       dio: mockDio,
       showScrapper: mockShowScrapper,
       episodeDownloader: mockEpisodeDownloader,
     );
-    when(() => mockEpisodeDownloader.downloadEpisode(any()))
-        .thenAnswer((((_) => Future(() => () {}))));
-    await showDownloader.download();
-    verify(() => mockDio.get<String>(any())).called(1);
-  });
+    when(() => mockShowScrapper.getEpisodeDataList(any(), any()))
+        .thenReturn([]);
 
-  test('Show downloader have scrapped the episodes', () async {
-    const showUrl = 'showUrl';
-    final mockDio = _getValidDioForShowDownload(showUrl);
-    final showScrapper = MockShowScrapper();
-    when(() => showScrapper.getShowName(any())).thenReturn('Show Name');
-    when(() => showScrapper.getEpisodeLinks(any()))
-        .thenReturn(['first', 'second']);
-    var mockEpisodeDownloader = MockEpisodeDownloader();
-    final ShowDownloader showDownloader = ShowDownloader(
-      showUrl: showUrl,
-      dio: mockDio,
-      showScrapper: showScrapper,
-      episodeDownloader: mockEpisodeDownloader,
-    );
     when(() => mockEpisodeDownloader.downloadEpisode(any()))
         .thenAnswer((((_) => Future(() => () {}))));
-    await showDownloader.download();
-    verify(() => showScrapper.getShowName(any())).called(1);
+    await showDownloader.initialize(showUrl);
+    verify(() => mockDio.get<String>(any())).called(1);
   });
 
   test('Show downloader haven\'t scrapped the episodes if http failed',
@@ -51,14 +33,37 @@ void main() {
     const showUrl = 'showUrl';
     final mockDio = _getInvalidDioForShowDownload(showUrl);
     final showScrapper = MockShowScrapper();
-    final ShowDownloader showDownloader = ShowDownloader(
-      showUrl: showUrl,
+    final ShowDownloaderManager showDownloader = ShowDownloaderManager(
       dio: mockDio,
       showScrapper: showScrapper,
       episodeDownloader: MockEpisodeDownloader(),
     );
+    when(() => showScrapper.getEpisodeLinks(any())).thenReturn([]);
+    await showDownloader.initialize(showUrl);
+    verifyNever(() => showScrapper.getEpisodeLinks(any()));
+  });
+
+  test('Downloader manager haven\'t used get on download', () async {
+    const showUrl = 'showUrl';
+    final mockDio = _getValidDioForShowDownload(showUrl);
+    final showScrapper = MockShowScrapper();
+    when(() => showScrapper.getShowName(any())).thenReturn('');
+    when(() => showScrapper.getEpisodeLinks(any()))
+        .thenReturn(['First', 'Second']);
+    var mockEpisodeDownloader = MockEpisodeDownloader();
+    final ShowDownloaderManager showDownloader = ShowDownloaderManager(
+      dio: mockDio,
+      showScrapper: showScrapper,
+      episodeDownloader: mockEpisodeDownloader,
+    );
+    when(() => mockEpisodeDownloader.downloadEpisode(any()))
+        .thenAnswer((((_) => Future(() => () {}))));
+    when(() => showScrapper.getEpisodeDataList(any(), any())).thenReturn([]);
+
+    await showDownloader.initialize(showUrl);
+    verify(() => mockDio.get<String>(any())).called(1);
     await showDownloader.download();
-    verifyNever(() => showScrapper.getShowName(any()));
+    verifyNever(() => mockDio.get<String>(any()));
   });
 
   test('Downloader have retrieved episodes list', () async {
@@ -69,14 +74,16 @@ void main() {
     when(() => showScrapper.getEpisodeLinks(any()))
         .thenReturn(['First', 'Second']);
     var mockEpisodeDownloader = MockEpisodeDownloader();
-    final ShowDownloader showDownloader = ShowDownloader(
-      showUrl: showUrl,
+    final ShowDownloaderManager showDownloader = ShowDownloaderManager(
       dio: mockDio,
       showScrapper: showScrapper,
       episodeDownloader: mockEpisodeDownloader,
     );
     when(() => mockEpisodeDownloader.downloadEpisode(any()))
         .thenAnswer((((_) => Future(() => () {}))));
+    when(() => showScrapper.getEpisodeDataList(any(), any())).thenReturn([]);
+
+    await showDownloader.initialize(showUrl);
     await showDownloader.download();
     verify(() => showScrapper.getEpisodeLinks(any())).called(1);
   });
@@ -91,14 +98,36 @@ void main() {
         .thenReturn(['First', 'Second']);
     when(() => episodeDownloader.downloadEpisode(any()))
         .thenAnswer((((_) => Future(() => () {}))));
-    final ShowDownloader showDownloader = ShowDownloader(
-        showUrl: showUrl,
+    when(() => showScrapper.getEpisodeDataList(any(), any())).thenReturn([]);
+    final ShowDownloaderManager showDownloader = ShowDownloaderManager(
         dio: mockDio,
         showScrapper: showScrapper,
         episodeDownloader: episodeDownloader);
 
+    await showDownloader.initialize(showUrl);
     await showDownloader.download();
     verify(() => episodeDownloader.downloadEpisode(any())).called(2);
+  });
+
+  test('Dowloader have retrieved scrapped data', () async {
+    const showUrl = 'showUrl';
+    final mockDio = _getValidDioForShowDownload(showUrl);
+    final showScrapper = MockShowScrapper();
+    final episodeDownloader = MockEpisodeDownloader();
+    when(() => showScrapper.getShowName(any())).thenReturn('');
+    when(() => showScrapper.getEpisodeLinks(any()))
+        .thenReturn(['First', 'Second']);
+    when(() => episodeDownloader.downloadEpisode(any()))
+        .thenAnswer((((_) => Future(() => () {}))));
+    when(() => showScrapper.getEpisodeDataList(any(), any())).thenReturn([]);
+    final ShowDownloaderManager showDownloader = ShowDownloaderManager(
+        dio: mockDio,
+        showScrapper: showScrapper,
+        episodeDownloader: episodeDownloader);
+
+    await showDownloader.initialize(showUrl);
+    verify(() => showScrapper.getEpisodeDataList(any(), any())).called(1);
+    expect(showDownloader.episodeDataList, isNotNull);
   });
 }
 
