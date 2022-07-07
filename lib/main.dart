@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:scrapper/downloader/episode_downloader.dart';
@@ -17,6 +19,10 @@ class ScrapperApp extends StatefulWidget {
 }
 
 class _ScrapperAppState extends State<ScrapperApp> {
+  void onProgressChange(int episodeNumber, int percent) {
+    log('Episode $episodeNumber is $percent completed');
+  }
+
   void download() async {
     final showDOwnlaoder = ShowDownloaderManager(
       dio: Dio(),
@@ -24,8 +30,11 @@ class _ScrapperAppState extends State<ScrapperApp> {
       episodeDownloader: EpisodeDownloader(
         dio: Dio(),
         episodeScrapper: EpisodeScrapper(),
+        episodeDownloaderListener: onProgressChange,
       ),
     );
+    await showDOwnlaoder
+        .initialize('https://www.ennovelas.com/category/En+los+tacones+de+Eva');
     await showDOwnlaoder.download();
   }
 

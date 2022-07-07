@@ -129,6 +129,18 @@ void main() {
     verify(() => showScrapper.getEpisodeDataList(any(), any())).called(1);
     expect(showDownloader.episodeDataList, isNotNull);
   });
+
+  test('Episode is donloading just one episode', () async {
+    const showUrl = 'showUrl';
+    final mockDio = _getValidDioForShowDownload(showUrl);
+    final showScrapper = MockShowScrapper();
+    final episodeDownloader = MockEpisodeDownloader();
+    final ShowDownloaderManager showDownloader = ShowDownloaderManager(
+      dio: mockDio,
+      showScrapper: showScrapper,
+      episodeDownloader: episodeDownloader,
+    );
+  });
 }
 
 Dio _getValidDioForShowDownload(String path) {

@@ -1,13 +1,20 @@
-import 'dart:developer';
-
 import 'package:dio/dio.dart';
+import 'package:scrapper/data/episode_content_data.dart';
 import 'package:scrapper/downloader/url_generator.dart';
 import 'package:scrapper/scrapper/episode_scrapper.dart';
+
+typedef OnEpisodeDownloadProgress = void Function(
+    int episodeNumber, int percent);
 
 class EpisodeDownloader {
   final Dio dio;
   final EpisodeScrapper episodeScrapper;
-  EpisodeDownloader({required this.dio, required this.episodeScrapper});
+  final OnEpisodeDownloadProgress? episodeDownloaderListener;
+  EpisodeDownloader({
+    required this.dio,
+    required this.episodeScrapper,
+    this.episodeDownloaderListener,
+  });
 
   Future<void> downloadEpisode(String episodeUrl) async {
     final firstResponse = await dio.get<String>(episodeUrl);
@@ -28,6 +35,12 @@ class EpisodeDownloader {
       await dio.download(
         generator.getGeneratedUrl(),
         'downloads/$episodeNumber.mp4',
+        onReceiveProgress: (count, total) => episodeDownloaderListener != null
+            ? episodeDownloaderListener!(
+                int.parse(episodeNumber!),
+                (count / total * 100).round(),
+              )
+            : null,
       );
     }
   }
