@@ -58,8 +58,7 @@ class EpisodeDownloader {
     );
     File destinationFile = File(destinationPath);
     if (destinationFile.existsSync()) {
-      String fileContent = destinationFile.readAsStringSync();
-      if (fileContent == 'error_expired' || fileContent == 'error_wrong_ip') {
+      if (destinationFile.lengthSync() < 1024) {
         destinationFile.delete();
         await _downloadFile(generator, destinationPath, episodeNumber);
         print('Retying');
