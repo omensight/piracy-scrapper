@@ -1,5 +1,6 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
-import 'package:scrapper/data/episode_content_data.dart';
 import 'package:scrapper/downloader/url_generator.dart';
 import 'package:scrapper/scrapper/episode_scrapper.dart';
 
@@ -32,16 +33,37 @@ class EpisodeDownloader {
       final episodeNumber = episodeScrapper.getEpisodeNumber(
           episodePageContent: firstResponse.data!);
 
-      await dio.download(
-        generator.getGeneratedUrl(),
-        'downloads/$episodeNumber.mp4',
-        onReceiveProgress: (count, total) => episodeDownloaderListener != null
-            ? episodeDownloaderListener!(
-                int.parse(episodeNumber!),
-                (count / total * 100).round(),
-              )
-            : null,
-      );
+      String destinationPath = 'downloads/$episodeNumber.mp4';
+
+      await _downloadFile(generator, destinationPath, episodeNumber);
+    }
+  }
+
+  Future<void> _downloadFile(
+    UrlGenerator generator,
+    destinationPath,
+    episodeNumber,
+  ) async {
+    var randomizedUrl = generator.getRandomizedUrl();
+    print(randomizedUrl);
+    await dio.download(
+      randomizedUrl,
+      destinationPath,
+      onReceiveProgress: (count, total) => episodeDownloaderListener != null
+          ? episodeDownloaderListener!(
+              int.parse(episodeNumber!),
+              (count / total * 100).round(),
+            )
+          : null,
+    );
+    File destinationFile = File(destinationPath);
+    if (destinationFile.existsSync()) {
+      String fileContent = destinationFile.readAsStringSync();
+      if (fileContent == 'error_expired' || fileContent == 'error_wrong_ip') {
+        destinationFile.delete();
+        await _downloadFile(generator, destinationPath, episodeNumber);
+        print('Retying');
+      }
     }
   }
 }

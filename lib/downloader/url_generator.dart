@@ -1,11 +1,15 @@
+import 'dart:math';
+
 class UrlGenerator {
   final String sample1;
   final String sample2;
+  final bool random;
   int _timesRequested = 0;
   int _equalitySize = 0;
   int _lastSlashIndex = 0;
   int _availableSpacesForGeneration = 0;
-  UrlGenerator({required this.sample1, required this.sample2}) {
+  UrlGenerator(
+      {required this.sample1, required this.sample2, this.random = false}) {
     if (sample1.length == sample2.length) {
       bool equalitySizeSettled = false;
       for (int i = 0; i < sample1.length; i++) {
@@ -25,8 +29,23 @@ class UrlGenerator {
     if (sample1 == sample2) {
       throw Exception('Two samples are the same');
     }
+    int max = pow(26, _availableSpacesForGeneration).round() - 1;
     String generatedPart =
         calculateFillPart(_timesRequested, _availableSpacesForGeneration);
+    _timesRequested++;
+    return '${sample1.substring(0, _equalitySize)}$generatedPart/v.mp4';
+  }
+
+  String getRandomizedUrl() {
+    if (sample1 == sample2) {
+      throw Exception('Two samples are the same');
+    }
+    int max = pow(26, _availableSpacesForGeneration).round() - 1;
+    if (max > 4294967296) {
+      max = 4294967296;
+    }
+    String generatedPart =
+        calculateFillPart(Random().nextInt(max), _availableSpacesForGeneration);
     _timesRequested++;
     return '${sample1.substring(0, _equalitySize)}$generatedPart/v.mp4';
   }
